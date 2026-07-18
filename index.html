@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#082b3a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Jackspeak Translator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="signal-strip" aria-hidden="true"></div>
+  <main class="shell">
+    <header class="masthead">
+      <div class="badge" aria-hidden="true">⚓</div>
+      <p class="eyebrow">Pusser's Phrase Office</p>
+      <h1>Jackspeak Translator</h1>
+      <p class="subtitle">Turn everyday UK English into informal Royal Navy-style mess-deck banter.</p>
+    </header>
+
+    <section class="panel" aria-labelledby="input-heading">
+      <div class="panel-heading">
+        <h2 id="input-heading">Plain English</h2>
+        <button id="clearBtn" class="text-button" type="button">Clear</button>
+      </div>
+      <label class="sr-only" for="inputText">Text to translate</label>
+      <textarea id="inputText" rows="7" autocapitalize="sentences" autocomplete="off" spellcheck="true" placeholder="Example: Please call my friend and tell him the food is ready."></textarea>
+
+      <label class="mode-label" for="mode">Amount of Jackspeak</label>
+      <select id="mode">
+        <option value="light">Light touch</option>
+        <option value="medium" selected>Mess-deck</option>
+        <option value="heavy">Full matelot</option>
+      </select>
+
+      <button id="translateBtn" class="primary-button" type="button">Translate</button>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel output-panel" aria-labelledby="output-heading">
+      <div class="panel-heading">
+        <h2 id="output-heading">Jackspeak</h2>
+        <button id="copyBtn" class="text-button" type="button">Copy</button>
+      </div>
+      <div id="outputText" class="output" tabindex="0">Your translation will appear here.</div>
+    </section>
+
+    <details class="panel notes">
+      <summary>About this translator</summary>
+      <p>This is an informal, approximate phrase generator—not an official Royal Navy communications tool. Naval slang varies by era, branch, ship and mess.</p>
+      <p>The glossary can be expanded as more reliable, legally usable source material becomes available.</p>
+    </details>
+  </main>
+
+  <footer>
+    <span aria-hidden="true">⚓</span> Fair winds and following seas
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
