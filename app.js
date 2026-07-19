@@ -32,6 +32,31 @@ const synonymMap={
 };
 
 const sentenceTemplates=[
+
+  {
+    name:'fell overboard into sea',
+    level:1,
+    pattern:/^\s*(?:(i|he|she|we|they|you|[A-Z][A-Za-z'-]*)\s+)?(?:accidentally\s+)?(?:fell|tumbled|slipped|went|was knocked|got knocked)\s+(?:overboard|over the side)(?:\s+(?:and|then))?(?:\s+(?:fell|landed|went|dropped|splashed))?(?:\s+(?:into|in))?(?:\s+the)?\s*(?:water|sea|ocean|oggin)?\s*([.!?]*)\s*$/i,
+    replace:m=>immersionSentence(m[1],false,m[2])
+  },
+  {
+    name:'fell into sea',
+    level:1,
+    pattern:/^\s*(?:(i|he|she|we|they|you|[A-Z][A-Za-z'-]*)\s+)?(?:accidentally\s+)?(?:fell|tumbled|slipped|went|was knocked|got knocked)\s+(?:into|in)\s+(?:the\s+)?(?:water|sea|ocean|oggin)\s*([.!?]*)\s*$/i,
+    replace:m=>immersionSentence(m[1],false,m[2])
+  },
+  {
+    name:'jumped overboard',
+    level:2,
+    pattern:/^\s*(?:(i|he|she|we|they|you|[A-Z][A-Za-z'-]*)\s+)?(?:deliberately\s+|intentionally\s+)?(?:jumped|dived|leapt|hopped)\s+(?:overboard|over the side|into\s+(?:the\s+)?(?:water|sea|ocean|oggin))\s*([.!?]*)\s*$/i,
+    replace:m=>immersionSentence(m[1],true,m[2])
+  },
+  {
+    name:'person overboard',
+    level:1,
+    pattern:/^\s*(?:a\s+)?(?:man|person|sailor|crew member|rating)\s+(?:has\s+|had\s+)?(?:fallen|fell|gone|went)\s+overboard\s*([.!?]*)\s*$/i,
+    replace:m=>`Someone's float-tested themselves and hit the oggin${m[1]||'.'}`
+  },
   {
     name:'hot food',
     level:1,
@@ -89,6 +114,21 @@ const sentenceTemplates=[
 ];
 
 const contextSenses=[
+
+  {
+    name:'sea-water',
+    target:/\b(?:the\s+)?(?:water|sea|ocean)\b/i,
+    context:['overboard','over the side','fell','fallen','jumped','dived','swam','swim','ship','boat','deck','shore','waves'],
+    replacement:'the oggin',
+    level:1
+  },
+  {
+    name:'drinking-water',
+    target:/\b(?:some\s+|a\s+glass\s+of\s+|a\s+bottle\s+of\s+)?water\b/i,
+    context:['drink','drinking','thirsty','glass','bottle','fresh','tap','hydration'],
+    replacement:"Adam's ale",
+    level:1
+  },
   {
     name:'hot-food',
     target:/\b(?:very\s+|really\s+|extremely\s+)?(?:hot|spicy)\b/i,
@@ -132,6 +172,31 @@ function pattern(term){
   return new RegExp((/^\w/.test(term)?'\\b':'')+e+(/\w$/.test(term)?'\\b':''),'gi');
 }
 function titleCase(s){return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase()}
+
+function immersionSentence(subject,deliberate,punctuation){
+  const stop=punctuation||'.';
+  if(!subject){
+    return deliberate
+      ? `Went for an unscheduled dip in the oggin${stop}`
+      : `Float-tested myself and hit the oggin${stop}`;
+  }
+
+  const lower=subject.toLowerCase();
+  const forms={
+    i:{lead:'I',reflexive:'myself'},
+    he:{lead:'He',reflexive:'himself'},
+    she:{lead:'She',reflexive:'herself'},
+    we:{lead:'We',reflexive:'ourselves'},
+    they:{lead:'They',reflexive:'themselves'},
+    you:{lead:'You',reflexive:'yourself'}
+  };
+  const form=forms[lower]||{lead:titleCase(subject),reflexive:'themselves'};
+
+  if(deliberate){
+    return `${form.lead} went for an unscheduled dip in the oggin${stop}`;
+  }
+  return `${form.lead} float-tested ${form.reflexive} and hit the oggin${stop}`;
+}
 function subjectPronoun(s){
   s=s.toLowerCase();
   if(s==='we')return "We're";
