@@ -121,7 +121,12 @@ function fatigueSubject(s){
   return "The ship's company are";
 }
 function namedGroups(match){return match&&match.groups?match.groups:{};}
-function compileConceptPattern(source){return new RegExp(`^\\s*(?:${source})\\s*[.!?]*\\s*$`,'i');}
+function compileConceptPattern(source){
+  // concept-data.js was generated with Python-style named groups (?P<name>).
+  // Browsers require JavaScript's (?<name>) syntax.
+  const browserSource=String(source).replace(/\(\?P</g,'(?<');
+  return new RegExp(`^\\s*(?:${browserSource})\\s*[.!?]*\\s*$`,'i');
+}
 function conceptThreshold(mode){return mode==='safe'?5:mode==='balanced'?4:3;}
 function applyConceptEngine(sentence,mode,matches){
   const threshold=conceptThreshold(mode);
