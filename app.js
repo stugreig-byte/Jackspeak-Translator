@@ -417,7 +417,7 @@ function translate(){
 
   let text=splitSentences(raw).map(sentence=>applyConceptEngine(sentence,rewriteMode,matches)).join('');
 
-  text=applyAutomatedConceptLayer(text,mode,matches);
+  text=applyAutomatedConceptLayer(text,rewriteMode,matches);
   text=splitSentences(text).map(sentence=>applySentenceTemplate(sentence,level,matches)).join('');
 
   text=applyContextMeanings(text,level,store,matches);
