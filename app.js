@@ -2,8 +2,146 @@
 
 const rules=window.JACKSPEAK_MANUAL_RULES||{};
 const index=window.JACKSPEAK_SOURCE_INDEX||[];
+const concepts=window.JACKSPEAK_CONCEPTS||[];
+const autoConcepts=window.JACKSPEAK_AUTO_CONCEPTS||[];
 const $=id=>document.getElementById(id);
 const input=$('input'),output=$('output'),status=$('status'),suggestions=$('suggestions');
+
+
+const conceptRenderers={
+  immersion_accidental:(g,raw)=>immersionSentence(g.subject,false,punctuationOf(raw)),
+  immersion_deliberate:(g,raw)=>immersionSentence(g.subject,true,punctuationOf(raw)),
+  deep_six_object:(g,raw)=>`${subjectLead(g.subject)} deep-sixed the ${navalObject(g.item)} in the oggin${punctuationOf(raw)}`,
+  bumph_adrift:(g,raw)=>`The bumph's all adrift${punctuationOf(raw)}`,
+  up_to_eyes_bumph:(g,raw)=>`${subjectLead(g.subject)} ${beVerb(g.subject)} up to ${possessive(g.subject)} eyes in bumph${punctuationOf(raw)}`,
+  subject_adrift:(g,raw)=>`${contractSubject(g.subject)} adrift${punctuationOf(raw)}`,
+  ball_bagged:(g,raw)=>`${fatigueSubject(g.subject)} ball-bagged${punctuationOf(raw)}`,
+  scran_reheat:(g,raw)=>`This scran's got some serious reheat${punctuationOf(raw)}`,
+  blower_bent:(g,raw)=>`The blower's bent${punctuationOf(raw)}`,
+  bin_it:(g,raw)=>`Bin it${punctuationOf(raw)}`,
+  aye_aye:(g,raw)=>`Aye aye${punctuationOf(raw)}`,
+  brass_monkeys:(g,raw)=>`It's brass monkeys${punctuationOf(raw)}`,
+  bad_scran:(g,raw)=>`This scran's proper gash${punctuationOf(raw)}`,
+  bog_off:(g,raw)=>`Bog off${punctuationOf(raw)}`
+};
+
+
+function autoTokens(text){
+  const stop=new Set(['this','that','the','and','but','with','from','into','onto','over','under','have','has','had','was','were','are','is','am','being','been','very','really','just','some','then','than','they','them','their','there','here','your','you','our','ours','his','her','she','him','who','what','when','where','which','would','could','should']);
+  return (String(text).toLowerCase().match(/[a-z][a-z'-]{2,}/g)||[])
+    .map(w=>w.replace(/'s$/,'').replace(/ies$/,'y').replace(/s$/,''))
+    .filter(w=>!stop.has(w));
+}
+function phraseRegex(phrase){
+  const escaped=phrase.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s+');
+  return new RegExp(`\\b${escaped}\\b`,'i');
+}
+function applyAutomatedConceptLayer(text,mode,matches){
+  const threshold=mode==='safe'?4:mode==='balanced'?3:2;
+  let result=text;
+  const protectedTerms=new Set();
+
+  // High-confidence reverse-definition phrase mappings.
+  for(const rec of autoConcepts){
+    if(rec.q<threshold||!rec.p||!rec.p.length)continue;
+    for(const phrase of rec.p.sort((a,b)=>b.length-a.length)){
+      const rx=phraseRegex(phrase);
+      if(rx.test(result)){
+        result=result.replace(rx,matched=>{
+          protectedTerms.add(rec.t.toLowerCase());
+          matches.push({layer:'automated concept',name:rec.t});
+          return preserveCase(matched,rec.t);
+        });
+        break;
+      }
+    }
+  }
+
+  // Semantic fallback: one cautious replacement per sentence, only with strong overlap.
+  result=splitSentences(result).map(sentence=>{
+    const toks=new Set(autoTokens(sentence));
+    if(toks.size<2)return sentence;
+    let best=null,bestScore=0;
+    for(const rec of autoConcepts){
+      if(rec.q<threshold||protectedTerms.has(rec.t.toLowerCase()))continue;
+      let overlap=0;
+      for(const k of rec.k||[])if(toks.has(k))overlap++;
+      if(overlap<2)continue;
+      const score=overlap*2 + rec.q + Math.min((rec.p||[]).length,2);
+      if(score>bestScore){best=rec;bestScore=score;}
+    }
+    const needed=mode==='adventurous'?7:9;
+    if(!best||bestScore<needed)return sentence;
+
+    // Replace the longest matching cue, rather than appending unexplained slang.
+    const cues=[...(best.p||[]),...(best.k||[])].sort((a,b)=>b.length-a.length);
+    for(const cue of cues){
+      const rx=phraseRegex(cue);
+      if(rx.test(sentence)){
+        matches.push({layer:'automated semantic',name:best.t});
+        return sentence.replace(rx,m=>preserveCase(m,best.t));
+      }
+    }
+    return sentence;
+  }).join('');
+
+  return result;
+}
+
+function punctuationOf(text){
+  const m=String(text).trim().match(/[.!?]+$/);
+  return m?m[0]:'.';
+}
+function subjectLead(s){
+  const map={i:'I',he:'He',she:'She',we:'We',they:'They',you:'You'};
+  return map[String(s||'i').toLowerCase()]||titleCase(String(s||'I'));
+}
+function navalObject(item){
+  const v=String(item||'kit').toLowerCase();
+  if(['phone','mobile','telephone'].includes(v))return 'blower';
+  if(v==='radio')return 'wireless';
+  return v;
+}
+function beVerb(s){return ['i'].includes(String(s).toLowerCase())?'am':['he','she'].includes(String(s).toLowerCase())?'is':'are';}
+function possessive(s){
+  const map={i:'my',he:'his',she:'her',we:'our',they:'their',you:'your'};
+  return map[String(s||'we').toLowerCase()]||'our';
+}
+function contractSubject(s){
+  const map={i:"I'm",we:"We're",they:"They're",you:"You're",he:"He's",she:"She's",'the team':'The team are','the project':"The project's",'the job':"The job's"};
+  return map[String(s||'we').toLowerCase()]||subjectLead(s);
+}
+function fatigueSubject(s){
+  const key=String(s||'everyone').toLowerCase();
+  if(key==='i')return "I'm";
+  if(key==='we')return "We're";
+  if(key==='they')return "They're";
+  if(key==='he')return "He's";
+  if(key==='she')return "She's";
+  return "The ship's company are";
+}
+function namedGroups(match){return match&&match.groups?match.groups:{};}
+function compileConceptPattern(source){return new RegExp(`^\\s*(?:${source})\\s*[.!?]*\\s*$`,'i');}
+function conceptThreshold(mode){return mode==='safe'?5:mode==='balanced'?4:3;}
+function applyConceptEngine(sentence,mode,matches){
+  const threshold=conceptThreshold(mode);
+  const trimmed=sentence.trim();
+  if(!trimmed)return sentence;
+  for(const concept of concepts){
+    if((concept.confidence||3)<threshold)continue;
+    for(const source of concept.patterns||[]){
+      const match=trimmed.match(compileConceptPattern(source));
+      if(!match)continue;
+      const renderer=conceptRenderers[concept.render];
+      if(!renderer)continue;
+      matches.push({layer:'concept/event',name:concept.id});
+      const leading=sentence.match(/^\s*/)?.[0]||'';
+      const trailing=sentence.match(/\s*$/)?.[0]||'';
+      return leading+renderer(namedGroups(match),trimmed)+trailing;
+    }
+  }
+  return sentence;
+}
 
 const synonymMap={
   phone:['telephone','mobile','blower'],
@@ -274,9 +412,13 @@ function translate(){
     return;
   }
   const level=+$('strength').value;
+  const rewriteMode=$('rewriteMode').value;
   const store=[],matches=[];
 
-  let text=splitSentences(raw).map(sentence=>applySentenceTemplate(sentence,level,matches)).join('');
+  let text=splitSentences(raw).map(sentence=>applyConceptEngine(sentence,rewriteMode,matches)).join('');
+
+  text=applyAutomatedConceptLayer(text,mode,matches);
+  text=splitSentences(text).map(sentence=>applySentenceTemplate(sentence,level,matches)).join('');
 
   text=applyContextMeanings(text,level,store,matches);
 
@@ -305,7 +447,9 @@ function translate(){
   const summary=Object.entries(counts).map(([k,v])=>`${v} ${k}`).join(', ');
   status.textContent=matches.length
     ? `Applied ${summary}.`
-    : 'No confident translation found; source suggestions are shown below.';
+    : rewriteMode==='safe'
+      ? 'No high-confidence rewrite found. Try Balanced or Adventurous mode.'
+      : 'No confident translation found; source suggestions are shown below.';
 }
 function tokenize(source){
   const words=(source.toLowerCase().match(/[a-z][a-z'-]{2,}/g)||[])
